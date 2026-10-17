@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Websocket Client</title>
+<script type="text/javascript">
+const socket = new WebSocket('ws://192.168.50.38:9001');
+socket.binaryType = "arraybuffer";
+socket.addEventListener('open', (event) => {
+	document.getElementById('close').disabled = false;
+	document.getElementById('send').disabled = false;
+	document.getElementById('send_line').disabled = false;
+	document.getElementById('ir').disabled = false;
+	document.getElementById('learn').disabled = false;
+});
+socket.addEventListener('message', (event) => {
+	if (event.data instanceof ArrayBuffer) {
+		const byteArray = new Uint8Array(event.data);
+		document.getElementById('message').innerText = byteArray;
+	} else document.getElementById('message').innerText = event.data;
+});
+socket.addEventListener('error', (event) => { alert('error'); });
+socket.addEventListener('close', (event) => {
+	document.getElementById('close').disabled = true;
+	document.getElementById('send').disabled = true;
+	document.getElementById('send_line').disabled = true;
+	document.getElementById('ir').disabled = true;
+	document.getElementById('learn').disabled = true;
+});
+var rc_toggle = 0x38;
+function rc6(adr, cmd) {
+	const bit2 = Uint8Array.fromHex("586898A8");
+	const a = Uint8Array.fromHex("5D10FE28560011223344112233446565800E");
+	rc_toggle = rc_toggle ^ 0xf0;
+	a[5] = rc_toggle;
+	a[6] = bit2[(adr >> 6) & 3]; 
+	a[7] = bit2[(adr >> 4) & 3]; 
+	a[8] = bit2[(adr >> 2) & 3]; 
+	a[9] = bit2[adr & 3]; 
+	a[10] = bit2[(cmd >> 6) & 3]; 
+	a[11] = bit2[(cmd >> 4) & 3]; 
+	a[12] = bit2[(cmd >> 2) & 3]; 
+	a[13] = bit2[cmd & 3]; 
+	return a;
+}
+function buttonClose() { socket.close(1000, "Client closing connection"); }
+function buttonSend() { socket.send(document.getElementById('text').value); }
+function buttonSendLine() {
+	socket.send(document.getElementById('text').value + '\r\n');
+}
+function keyDown() { socket.send(rc6(4, 12)); }
+function keyUp() { socket.send(new ArrayBuffer(0)); }
+function test() {
+	socket.send('');
+//	document.getElementById("message").innerText = rc6(4, 12);;
+}
+</script>
+</head>
+<body>
+<input type='text' id='text' size='40'>
+<button id='send' onclick="buttonSend()" disabled>Send</button>
+<button id='send_line' onclick="buttonSendLine()" disabled>Send(CRLF)</button>
+<button id="close" onclick="buttonClose()" disabled>Close Connection</button>
+<button id="ir" onmousedown="keyDown()" onmouseup="keyUp()" disabled>IR</button>
+<button id="learn" onclick="test()" disabled>LEARN</button>
+<div id='message'></div>
+</body>
+</html>
