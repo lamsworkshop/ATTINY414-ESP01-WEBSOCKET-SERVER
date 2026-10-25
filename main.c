@@ -133,17 +133,18 @@ void ipd_ws(unsigned length, WS_FRAME *frame) {
 	frame->length &= 127;				// length must be multiple of 4
 	for (int i = 0; i < frame->length; i += 4)
 		frame->data[i >> 2] ^= frame->mask;
+	for (int i = 0; i < 30; i++)			// move data up to cover mask
+		frame->data[i - 1] = frame->data[i];
 	switch (frame->opcode) {
 	case 0x88:	clients[ID & 3] = TCP; break;			// CLOSE
-	case 0x89:	frame->opcode = 0x8A;					// PING
-				return send_message(frame->length + 2);
-	case 0x81:	for (int i = 0; i < 30; i++)			// TEXT
-					frame->data[i - 1] = frame->data[i];
+	case 0x89:	frame->opcode = 0x8A; break;			// PING
+	case 0x81:											// TEXT
 				if (*(uint64_t*)&frame->mask == 0x50414A57432B5441)
 					return uart_print((char*)&frame->mask, frame->length);
-				else return send_message(frame->length + 2);
-	case 0x82:											// BINARY
+				break;
+	case 0x82:	return;									// BINARY
 	}
+	send_message(frame->length + 2);
 }
 
 void ipd() {
