@@ -142,7 +142,7 @@ void ipd_ws(unsigned length, WS_FRAME *frame) {
 				if (*(uint64_t*)&frame->mask == 0x50414A57432B5441)
 					return uart_print((char*)&frame->mask, frame->length);
 				break;
-	case 0x82:	return;									// BINARY
+	default:	return;									// BINARY
 	}
 	send_message(frame->length + 2);
 }
