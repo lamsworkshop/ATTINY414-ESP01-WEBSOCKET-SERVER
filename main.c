@@ -129,12 +129,11 @@ void ipd_tcp(unsigned length) {
 }
 
 void ipd_ws(unsigned length, WS_FRAME *frame) {
+	uint32_t mask;
 	for (uint8_t i = 0; length; length--) sram.message[i++] = uart_getc();
-	frame->length &= 127;				// length must be multiple of 4
-	for (int i = 0; i < frame->length; i += 4)
-		frame->data[i >> 2] ^= frame->mask;
-	for (int i = 0; i < 30; i++)			// move data up to cover mask
-		frame->data[i - 1] = frame->data[i];
+	mask = frame->mask;
+	length = ((frame->length &= 127) + 3) >> 2;
+	for (int i = 0; i < length; i++) frame->data[i - 1] = frame->data[i] ^ mask;
 	switch (frame->opcode) {
 	case 0x88:	clients[ID & 3] = TCP; break;			// CLOSE
 	case 0x89:	frame->opcode = 0x8A; break;			// PING
